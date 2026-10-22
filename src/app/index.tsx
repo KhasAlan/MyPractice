@@ -247,34 +247,7 @@ const filteredBurgers = useMemo(() => {
                     </View>
 
 
-                    <View style={styles.searchContainer}>
-    <Ionicons
-        name="search-outline"
-        size={22}
-        color={COLORS.muted}
-    />
-
-    <TextInput
-        style={styles.searchInput}
-        placeholder="Search burgers..."
-        placeholderTextColor={COLORS.muted}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        autoCapitalize="none"
-    />
-
-    {searchQuery.length > 0 && (
-        <TouchableOpacity
-            onPress={() => setSearchQuery("")}
-        >
-            <Ionicons
-                name="close-circle"
-                size={22}
-                color={COLORS.muted}
-            />
-        </TouchableOpacity>
-    )}
-</View>
+                    
 
                     {/* Categories */}
                     <ScrollView
@@ -404,8 +377,8 @@ const filteredBurgers = useMemo(() => {
                         </TouchableOpacity>
                     </View>
 
-                    
-                    {filteredBurgers.map((item) => (
+                    {/* Menu list */}
+                    {items.map((item, index) => (
                         <View
                             key={item.id}
                             style={styles.menuCard}
@@ -818,22 +791,5 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         paddingHorizontal: 3,
     },
-    searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    paddingHorizontal: 15,
-    height: 52,
-    marginBottom: 22,
-},
-searchInput: {
-    flex: 1,
-    color: COLORS.white,
-    fontSize: 15,
-},
 });
  

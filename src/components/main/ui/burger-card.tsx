@@ -1,47 +1,31 @@
-
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 export interface BurgerCardProps {
     id: number;
     title: string;
     shortDescription: string;
-    description: string;
     price: number;
-    category: string;
-    image: number;
+
 }
 
-export default function BurgerCard({
-    item,
-}: {
-    item: BurgerCardProps;
-}) {
+export default function BurgerCard({ item }: { item: BurgerCardProps }) {
     return (
-        <View style={styles.burgerContainer}>
-            <Image
-                source={item.image}
-                style={styles.burgerImage}
-                contentFit="contain"
-            />
-
+        <View key={item.id} style={styles.burgerContainer}>
+            <Image source={require("../../../../assets/images/burger.jpg")} style={styles.burgerImage} />
             <View>
-                <Text style={styles.burgerText}>
-                    {item.title}
-                </Text>
-
-                <Text style={styles.burgerShortDescription}>
-                    {item.shortDescription}
-                </Text>
+                <Text style={styles.burgerText}>{item.title}</Text>
+                <Text style={styles.burgerShortDescription}>{item.shortDescription}</Text>
             </View>
-
             <View style={styles.burgerPriceContainer}>
-                <Text style={styles.burgerPrice}>
-                    Rs. {item.price}
-                </Text>
+                <Text style={styles.burgerPrice}>Rs. {item.price}</Text>
+                <TouchableOpacity style={styles.addToCartButton}>
+                    <Ionicons name="add-outline" size={24} color="black" />
+                </TouchableOpacity>
             </View>
         </View>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
@@ -76,5 +60,9 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: "bold",
     },
-});
-    
+    addToCartButton: {
+        backgroundColor: "#fff",
+        padding: 10,
+        borderRadius: 100,
+    },
+})

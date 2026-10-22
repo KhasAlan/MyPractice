@@ -43,7 +43,7 @@ export default function Index() {
       <View style={styles.hero}>
         <View style={styles.shadow} />
         <Image
-          source={require("@/assets/images/burger.jpg")}
+          source={require("../../../../assets/images/burger.jpg")}
           style={{ width: imageWidth, height: imageWidth * 0.72 }}
           contentFit="contain"
         />
