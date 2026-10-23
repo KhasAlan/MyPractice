@@ -1,19 +1,28 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Redirect, Link } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {ActivityIndicator,Alert,ScrollView,StyleSheet,
+import { Link, Redirect, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
     Text,
     TouchableOpacity,
-    TextInput,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { categories, burger } from "@/mock/burger";
-import BurgerCard, {
-    BurgerCardProps,
-} from "@/components/main/ui/burger-card";
+
+import BurgerCard from "@/components/main/ui/burger-card";
+import type { BurgerCardProps } from "@/components/main/ui/burger-card";
+import { burger } from "@/mock/burger";
+import {
+    addItemToCart,
+    clearCart,
+    getCart,
+    type CartItems,
+} from "@/utils/cart-storage";
 
 const COLORS = {
     background: "#242329",
@@ -35,6 +44,8 @@ type BurgerItem = BurgerCardProps & {
     category: string;
 };
 
+const items = burger as BurgerItem[];
+
 const displayCategories = [
     { id: 1, title: "All" },
     { id: 2, title: "Classic" },
@@ -54,8 +65,9 @@ export default function Index() {
     const [user, setUser] = useState<any>(null);
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
-    const [cart, setCart] = useState<Record<number, number>>({});
+    const [cart, setCart] = useState<CartItems>({});
 
+    // Load logged-in user
     useEffect(() => {
         let cancelled = false;
 
@@ -87,37 +99,60 @@ export default function Index() {
         };
     }, []);
 
-    const items = burger as BurgerItem[];
+    // Reload the shared basket whenever this screen gains focus
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
 
-const filteredBurgers = useMemo(() => {
-    return items.filter((item) => {
-        const matchesSearch =
-            item.title
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            item.shortDescription
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase());
+            getCart()
+                .then((savedCart) => {
+                    if (active) setCart(savedCart);
+                })
+                .catch((error) => {
+                    console.error("Failed to load cart:", error);
+                });
 
-        const matchesCategory =
-            selectedCategory === "All" ||
-            (selectedCategory === "Classic" &&
-                ["Beef", "Chicken"].includes(item.category)) ||
-            (selectedCategory === "Gourmet" &&
-                gourmetBurgers.includes(item.title)) ||
-            item.category === selectedCategory;
+            return () => {
+                active = false;
+            };
+        }, [])
+    );
 
-        return matchesSearch && matchesCategory;
-    });
-}, [items, selectedCategory, searchQuery]);
+    // Search and category filters
+    const filteredBurgers = useMemo(() => {
+        return items.filter((item) => {
+            const matchesSearch =
+                item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.shortDescription
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase());
 
+            const matchesCategory =
+                selectedCategory === "All" ||
+                (selectedCategory === "Classic" &&
+                    ["Beef", "Chicken"].includes(item.category)) ||
+                (selectedCategory === "Gourmet" &&
+                    gourmetBurgers.includes(item.title)) ||
+                item.category === selectedCategory;
 
+            return matchesSearch && matchesCategory;
+        });
+    }, [selectedCategory, searchQuery]);
 
-    const addToCart = (item: BurgerItem) => {
-        setCart((previous) => ({
-            ...previous,
-            [item.id]: (previous[item.id] ?? 0) + 1,
-        }));
+    // Add a burger to the shared AsyncStorage basket
+    const addToCart = async (item: BurgerItem) => {
+        try {
+            const savedCart = await addItemToCart(item.id, 1);
+            setCart(savedCart);
+
+            Alert.alert(
+                "Added to basket",
+                `${item.title} added successfully.`
+            );
+        } catch (error) {
+            console.error("Failed to add burger:", error);
+            Alert.alert("Error", "Could not add burger to your basket.");
+        }
     };
 
     const cartCount = Object.values(cart).reduce(
@@ -131,6 +166,7 @@ const filteredBurgers = useMemo(() => {
         0
     );
 
+    // Display basket contents
     const showCart = () => {
         if (cartCount === 0) {
             Alert.alert(
@@ -154,11 +190,25 @@ const filteredBurgers = useMemo(() => {
             `Your basket (${cartCount})`,
             `${summary}\n\nTotal: Rs ${cartTotal.toFixed(2)}`,
             [
-                { text: "Continue shopping", style: "cancel" },
+                {
+                    text: "Continue shopping",
+                    style: "cancel",
+                },
                 {
                     text: "Clear basket",
                     style: "destructive",
-                    onPress: () => setCart({}),
+                    onPress: async () => {
+                        try {
+                            await clearCart();
+                            setCart({});
+                        } catch (error) {
+                            console.error("Failed to clear basket:", error);
+                            Alert.alert(
+                                "Error",
+                                "Could not clear your basket."
+                            );
+                        }
+                    },
                 },
             ]
         );
@@ -245,9 +295,6 @@ const filteredBurgers = useMemo(() => {
                             It’s a Taste Revolution!
                         </Text>
                     </View>
-
-
-                    
 
                     {/* Categories */}
                     <ScrollView
@@ -371,14 +418,17 @@ const filteredBurgers = useMemo(() => {
                         <Text style={styles.menuTitle}>Menu</Text>
 
                         <TouchableOpacity
-                            onPress={() => setSelectedCategory("All")}
+                            onPress={() => {
+                                setSelectedCategory("All");
+                                setSearchQuery("");
+                            }}
                         >
                             <Text style={styles.seeAll}>See all</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Menu list */}
-                    {items.map((item, index) => (
+                    {items.map((item) => (
                         <View
                             key={item.id}
                             style={styles.menuCard}
@@ -792,4 +842,3 @@ const styles = StyleSheet.create({
         paddingHorizontal: 3,
     },
 });
- 

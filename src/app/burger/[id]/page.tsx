@@ -1,23 +1,31 @@
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { Link, router, useLocalSearchParams } from "expo-router";
 import { burger } from "@/mock/burger";
 import { BurgerType } from "@/types/burger-type";
+import { addItemToCart } from "@/utils/cart-storage";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { Link, router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
-const UNIT_PRICE = 539;
+
 const BACKGROUND = "#242329";
 
 export default function Index() {
-  const {id }= useLocalSearchParams(); // string
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { width } = useWindowDimensions();
   const [quantity, setQuantity] = useState(1);
-  const imageWidth = Math.min(width - 24, 420);
+  const imageWidth = Math.min(width - 44, 420);
 
   const burgers = burger.find((burger: BurgerType) => burger.id === Number(id));
 
@@ -25,13 +33,13 @@ export default function Index() {
     return <Text>Burger not found</Text>;
   }
 
-  const inc = () => {
-    setQuantity(quantity + 1);
-  };
-  const dec = () => {
-    setQuantity(quantity - 1);
-  };
+const inc = () => {
+  setQuantity((prev) => prev + 1);
+};
 
+const dec = () => {
+  setQuantity((prev) => Math.max(1, prev - 1));
+};
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="light" />
@@ -78,21 +86,66 @@ export default function Index() {
 
           <View style={styles.priceBlock}>
             <Text style={styles.priceLabel}>Total price</Text>
-            <Text style={styles.priceValue}>Rs {burgers.price}</Text>
+            <Text style ={styles.priceValue}>
+              Rs {burgers.price * quantity}
+            </Text>
           </View>
         </View>
 
-        <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
-          <LinearGradient
-            colors={["#F6B245", "#E4891E"]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={styles.cartButton}
-          >
-            <Ionicons name="cart-outline" size={24} color="white" />
-            <Text style={styles.cartLabel}>Add to cart</Text>
-          </LinearGradient>
-        </Pressable>
+
+
+<Pressable
+  accessibilityRole="button"
+  onPress={async () => {
+    Alert.alert("TEST", "Button was pressed");
+
+    try {
+      const savedCart = await addItemToCart(
+        burgers.id,
+        quantity
+      );
+
+      console.log("SAVED CART:", savedCart);
+
+      Alert.alert(
+        "SUCCESS",
+        `${burgers.title} × ${quantity} added to cart`,
+        [
+          {
+            text: "Continue shopping",
+            onPress: () => router.back(),
+          },
+          {
+            text: "Open cart",
+            onPress: () => router.push("/cart"),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("ADD TO CART ERROR:", error);
+      Alert.alert("ERROR", String(error));
+    }
+  }}
+  style={({ pressed }) => [
+    pressed && styles.pressed,
+  ]}
+>
+  <LinearGradient
+    colors={["#F6B245", "#E4891E"]}
+    start={{ x: 0, y: 0.5 }}
+    end={{ x: 1, y: 0.5 }}
+    style={styles.cartButton}
+  >
+    <Ionicons name="cart-outline" size={24} color="white" />
+    <Text style={styles.cartLabel}>Add to cart</Text>
+  </LinearGradient>
+</Pressable>
+
+
+
+
+
+
       </View>
     </SafeAreaView>
   );
@@ -136,11 +189,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
-  footer: {
-    marginTop: "auto",
-    gap: 26,
-    paddingBottom: 16,
-  },
+footer: {
+  marginTop: 24,
+  gap: 20,
+  paddingBottom: 16,
+},
   purchaseRow: {
     flexDirection: "row",
     alignItems: "center",
