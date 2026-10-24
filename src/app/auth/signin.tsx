@@ -4,7 +4,7 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { signinSchema, SigninSchema } from "./auth.schema";
+import { signinSchema, type SigninSchema } from "./auth.schema";
 
 import {
     Alert,
@@ -26,7 +26,9 @@ export default function Signin() {
     const [hidden, setHidden] = useState(true);
     const [focused, setFocused] = useState<string | null>(null);
 
-    const { control, handleSubmit, formState: { errors } } = useForm<SigninSchema>({
+    const {
+    control,handleSubmit,formState: { errors },
+} = useForm<SigninSchema>({
         resolver: zodResolver(signinSchema),
         defaultValues: {
             email: "",
@@ -36,21 +38,71 @@ export default function Signin() {
 
     const onSubmit = async (data: SigninSchema) => {
         try {
-            await AsyncStorage.setItem('data', JSON.stringify(data));
-            await AsyncStorage.setItem('isLoggedIn', 'true');
-            router.replace("/");
-        }catch(err){
-            console.error(err);
-            Alert.alert('Error', 'Failed to log in');
+            const savedUser = await AsyncStorage.getItem("user");
+
+            if (!savedUser) {
+                Alert.alert(
+                    "Account not found",
+                    "Please create an account first."
+                );
+                return;
+            }
+
+            const user = JSON.parse(savedUser);
+
+            const emailMatches =
+                typeof user.email === "string" &&
+                user.email.trim().toLowerCase() ===
+                data.email.trim().toLowerCase();
+
+            const passwordMatches =
+                typeof user.password === "string" &&
+                user.password === data.password;
+
+            if (!emailMatches || !passwordMatches) {
+                Alert.alert(
+                    "Login failed",
+                    "Incorrect email or password."
+                );
+                return;
+            }
+
+            await AsyncStorage.setItem("isLoggedIn", "true");
+
+            await AsyncStorage.setItem(
+                "data",
+                JSON.stringify({
+                    name: user.name,
+                    email: user.email,
+                })
+            );
+
+            Alert.alert(
+                "Success",
+                "Logged in successfully.",
+                [
+                    {
+                        text: "Continue",
+                        onPress: () => router.replace("/"),
+                    },
+                ]
+            );
+        } catch (err) {
+            console.error("Login error:", err);
+
+            Alert.alert(
+                "Error",
+                "Failed to log in. Please try again."
+            );
         }
-        Alert.alert('Success', 'Logged in successfully');
-    }
+    };
 
     const goBack = () => {
         if (router.canGoBack()) {
             router.back();
             return;
         }
+
         router.replace("/");
     };
 
@@ -101,7 +153,15 @@ export default function Signin() {
                             />
                         )}
                     />
-                    {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}<Text style={styles.label}>Password</Text>
+
+
+                    {errors.email && (
+                        <Text style={styles.error}>
+                            {errors.email.message}
+                        </Text>
+                    )}
+
+                    <Text style={styles.label}>Password</Text>
                     <Controller
                         control={control}
                         name="password"
@@ -116,7 +176,7 @@ export default function Signin() {
                                     autoCapitalize="none"
                                     onFocus={() => {
                                         setFocused("password");
-                                        setHidden(false);
+
                                     }}
                                     onBlur={() => {
                                         onBlur();
